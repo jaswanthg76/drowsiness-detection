@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, jsonify
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -15,11 +15,16 @@ model = tf.keras.models.load_model('eye_state_detector.h5')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
 
+# Initialize global variables to store prediction and eye closed time
+current_prediction = "Eyes Open"
+eye_closed_duration = 0
+start_time =0
+
 def detect_drowsiness():
+    global current_prediction, eye_closed_duration,start_time
     cap = cv2.VideoCapture(0)
     alarm_triggered = False
-    eye_closed_time = 0
-    start_time = 0
+   
 
     while True:
         ret, frame = cap.read()
@@ -40,20 +45,29 @@ def detect_drowsiness():
                 eye = np.expand_dims(eye, axis=0)
 
                 prediction = model.predict(eye)
-                print(prediction)
 
-                if prediction < 0.5:  # Closed eye
-                    if not alarm_triggered:
-                        if eye_closed_time == 0:
-                            start_time = time.time()
-                        eye_closed_time = time.time() - start_time
+                if prediction[0][0] < 0.5:  # Closed eye
+                    current_prediction = "Eyes Closed"
+                    
+                    # START OF CHANGE: Ensure start_time is set when eyes are first detected as closed
+                    if start_time == 0:  # If this is the first detection of closed eyes
+                        start_time = time.time()
+                    
+                    # START OF CHANGE: Continuously update eye_closed_duration
+                    eye_closed_duration = time.time() - start_time
 
-                        if eye_closed_time >4:
-                            playsound('mixkit-classic-alarm-995.wav')  # Play alarm sound
-                            alarm_triggered = True
+                    # Trigger alarm if eyes closed for more than 5 seconds
+                    if eye_closed_duration > 3:
+                        playsound('mixkit-classic-alarm-995.wav')  # Play alarm sound
+                        alarm_triggered = True
+                        start_time = 0  # Reset start_time after alarm is triggered
                 else:
+                    current_prediction = "Eyes Open"
+                    
+                    # START OF CHANGE: Reset start_time and eye_closed_duration when eyes open
                     alarm_triggered = False
-                    eye_closed_time = 0
+                    start_time = 0  # Reset start_time when eyes are open
+                    eye_closed_duration = 0  # Reset eye_closed_duration as well
 
         # Encode the frame in JPEG format
         ret, buffer = cv2.imencode('.jpg', frame)
@@ -73,6 +87,11 @@ def index():
 def video_feed():
     return Response(detect_drowsiness(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/get_prediction')
+def get_prediction():
+    global current_prediction, eye_closed_duration,start_time
+    return jsonify(prediction=current_prediction, duration=eye_closed_duration,time=start_time)
 
 if __name__ == '__main__':
     app.run(debug=True)
