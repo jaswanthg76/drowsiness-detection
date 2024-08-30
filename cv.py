@@ -16,43 +16,58 @@ alarm_triggered = False
 eye_closed_time = 0
 start_time = 0
 
+current_prediction = "Eyes Open"
+
 while True:
-    ret, frame = cap.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    for (x, y, w, h) in faces:
-        face = frame[y:y + h, x:x + w]
-        eyes = eye_cascade.detectMultiScale(face)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
-        for (ex, ey, ew, eh) in eyes:
-            eye = face[ey:ey + eh, ex:ex + ew]
-            eye = cv2.resize(eye, (24, 24))
-            eye = eye / 255.0
-            eye = np.expand_dims(eye, axis=0)
+        for (x, y, w, h) in faces:
+            face = frame[y:y + h, x:x + w]
+            eyes = eye_cascade.detectMultiScale(face)
 
-            prediction = model.predict(eye)
-            print(prediction)
+            for (ex, ey, ew, eh) in eyes:
+                eye = face[ey:ey + eh, ex:ex + ew]
+                eye = cv2.resize(eye, (24, 24))
+                eye = eye / 255.0
+                eye = np.expand_dims(eye, axis=0)
 
-            if prediction < 0.9:  # Closed eye
-                if not alarm_triggered:
-                    if eye_closed_time == 0:
-                        start_time = time.time()
-                    eye_closed_time = time.time() - start_time
-                    print("eye_closed")
-                    print(eye_closed_time )
+                prediction = model.predict(eye)
+                print(prediction)
+
+                if prediction[0][0] < 0.6:  # Closed eye
+                    current_prediction = "Eyes Closed"
                     
-                    if eye_closed_time > 3 :
-                        playsound('mixkit-classic-alarm-995.wav')
+                    # START OF CHANGE: Ensure start_time is set when eyes are first detected as closed
+                    if start_time == 0:  # If this is the first detection of closed eyes
+                        start_time = time.time()
+                    
+                    # START OF CHANGE: Continuously update eye_closed_duration
+                    eye_closed_time = time.time() - start_time
+
+                    # Trigger alarm if eyes closed for more than 5 seconds
+                    if eye_closed_time > 1.5:
+                        playsound('mixkit-classic-alarm-995.wav')  # Play alarm sound
                         alarm_triggered = True
-            else:
-                alarm_triggered = False
-                eye_closed_time = 0
+                        start_time = 0  # Reset start_time after alarm is triggered
+                else:
+                    current_prediction = "Eyes Open"
+                    
+                    # START OF CHANGE: Reset start_time and eye_closed_duration when eyes open
+                    alarm_triggered = False
+                    start_time = 0  # Reset start_time when eyes are open
+                    eye_closed_duration = 0  # Reset eye_closed_duration as well
+        cv2.putText(frame, str(eye_closed_time), (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, current_prediction, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-    cv2.imshow('Drowsiness Detection', frame)
+        cv2.imshow('Drowsiness Detection', frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 cap.release()
 cv2.destroyAllWindows()
