@@ -5,6 +5,7 @@ import tensorflow as tf
 import time
 import torch
 from playsound import playsound
+from datetime import datetime
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -93,7 +94,9 @@ def video_feed():
 @app.route('/get_prediction')
 def get_prediction():
     global current_prediction, eye_closed_duration,start_time
-    return jsonify(prediction=current_prediction, duration=eye_closed_duration,time=start_time)
-
+    if(start_time!=0):
+       return jsonify(prediction=current_prediction, duration=eye_closed_duration,time=datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S'))
+    else:
+          return jsonify(prediction=current_prediction, duration=eye_closed_duration,time=start_time)
 if __name__ == '__main__':
     app.run(debug=True)

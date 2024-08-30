@@ -13,7 +13,7 @@
     </div>
     <h2 id="prediction">Prediction: Loading...</h2>
     <h3 id="timer">Eye Closed Duration: 0 seconds</h3>
-    <h3 id="start_time">start Time: 1 seconds</h3>
+    <h3 id="start_time">Start Time: 0 seconds</h3>
 
     <script>
         function updatePrediction() {
@@ -22,11 +22,20 @@
                 .then(data => {
                     document.getElementById('prediction').innerText = 'Prediction: ' + data.prediction;
                     document.getElementById('timer').innerText = 'Eye Closed Duration: ' + data.duration.toFixed(2) + ' seconds';
-                    document.getElementById('start_time').innerText = 'start Time: ' + data.time ;
+                    document.getElementById('start_time').innerText = 'Start Time: ' + data.time ;
                 });
         }
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return String(hours).padStart(2, '0') + ':' +
+                   String(minutes).padStart(2, '0') + ':' +
+                   String(secs).padStart(2, '0');
+        }
+       
 
-        setInterval(updatePrediction, 250);  // Update prediction and timer every 500ms
+        setInterval(updatePrediction, 250);  // Update prediction and timer every 250ms
     </script>
 </body>
 </html>
