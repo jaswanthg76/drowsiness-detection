@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import time
+import torch
 from playsound import playsound
 
 # Initialize the Flask app
@@ -14,6 +15,7 @@ model = tf.keras.models.load_model('eye_state_detector.h5')
 # Load Haar cascades for face and eye detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+
 
 # Initialize global variables to store prediction and eye closed time
 current_prediction = "Eyes Open"
